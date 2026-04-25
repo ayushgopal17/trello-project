@@ -38,7 +38,7 @@ const userId=decode.userId;
  if(userId){
 
  
-  req.userId;
+  req.userId= userId;
   next();
 
 }

@@ -8,25 +8,10 @@ let BOARDS_ID=1;
 let ISSUES_ID=1;
 
 const USERS=[];
-const ORGANIZATIONS=[{
-    id:1,
-    title: "100xdevs",
-    description: "Learning coding platform",
-    admin: 1,
-    member: [2]
-}];
-const BOARDS=[{
-    id:1,
-    title: "100xschool website (frontend)",
-    organisationId:1
-}];
+const ORGANIZATIONS=[];
+const BOARDS=[];
 
-const ISSUES=[{
-    id:1,
-    title: "Add dark mode",
-    boardId: 1,
-    state: "IN_PROGRESS"
-}];
+const ISSUES=[];
 
 const app= express()
 
@@ -138,7 +123,7 @@ app.post('/issue',(req,res)=>{
 app.get('/organisations',authMiddleware,(req,res)=>{
  
     const userId= req.userId;
-    const organisationId=req.query.organisationId;
+    const organisationId=parseInt(req.query.organisationId);
     const organisation = ORGANIZATIONS.find(
     org => org.id == organisationId
 );
@@ -206,7 +191,7 @@ app.delete('/members',authMiddleware,(req,res)=>{
    organisation.member = organisation.member.filter(user =>user.id !== memberUser.id);
 
   res.json({
-    message: "new member added!"
+    message: "old member Deleted!"
   })
 
 
