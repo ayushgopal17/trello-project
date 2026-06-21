@@ -1,205 +1,200 @@
-// const express=require ("express");
-// const jwt =require("jsonwebtoken");
-// const { authMiddleware } = require("./middleware");
+const express= require("express");
+const jwt= require("jsonwebtoken");
+const {authmiddleware}= require("./middleware")
+const {usersModel,organisationModel} = require("./models");
 
-// let USERS_ID =1;
-// let ORGANIZATIONS_ID=1;
-// let BOARDS_ID=1;
-// let ISSUES_ID=1;
+let BOARDS_ID=1;
+let ISSUES_ID=1;
 
-// const USERS=[];
-// const ORGANIZATIONS=[];
-// const BOARDS=[];
 
-// const ISSUES=[];
 
-// const app= express()
+const BOARDS=[];
+const ISSUES=[];
 
-// app.use(express.json());
-// app.post('/signup',(req,res)=>{
+const app=express();
+app.use(express.json())
 
-//     const username= req.body.username;
-//     const password= req.body.password;
+app.post("/signup",async(req,res)=>{
+const username= req.body.username;
+const password=req.body.password;
 
-//     const userExist= USERS.find(u=> u.username === username);
-//     if(userExist){
-//         res.status(411).json({
-//             message: "User With this Username Already Exists"
-//         })
-//         return;
-//     }
-//     USERS.push({
-//         username,
-//         password,
-//         id: USERS_ID++
-//     })
-//     res.json({
-//         message: "you have signed up successfully"
-//     })
+//const userExist= USERS.find(u => u.username ===username);
+const userExist= await usersModel.findOne({
+    username:username
+})
+if(userExist) {
+    res.status(411).json({
+        message: "user with this username already exist"
+    })
+    return
+}
+// USERS.push({
+//     username,
+//     password,
+//     id: USERS_ID++
 // })
 
+const newUser= usersModel.create({
+    username: username,
+    password:password
+})
+res.json({
+    id: newUser._id,
+    message: "You have signup successfully"
+})
+
+})
+
+app.post("/signin",async(req,res)=>{
+
+    const username= req.body.username;
+    const password = req.body.password;
+
+    //const userExist= USERS.find( u=> u.username === username && u.password === password)
+    const userExist= await usersModel.findOne({
+username: username,
+password:password
+    });
+    if(!userExist){
+        res.status(403).json({
+            message: "Incorrect credientials"
+        })
+        return
+    }
+
+   const token= jwt.sign({
+        userId: userExist.id
+    },"Atlassian123");
+    res.json({
+        token
+    });
+})
+app.post("/organizations",authmiddleware,(req,res)=>{
+const userId=req.userId;
+
+const newOrg = await organisationModel.create({
+
+
+    title: req.body.title,
+    description: req.body.description,
+    admin: userId,
+    member: []
+})
+
+res.json({
+    message: "Org created",
+    id: ORGANISATIONS_ID -1
+})
+})
+
+app.post("/add-member-to-organization",authmiddleware,async (req,res)=>{
+    const userId=req.userId;
+    const organisationId=req.body.organisationId;
+    const memberUserUsername= req.body.memberUserUsername;
+
+    const organisation= await organisationModel.findOne({
+        _id:organisationId
+    })
+
+    if(!organisation || organisation.admin !== userId){
+        res.status(411).json({
+            message: "Either org doesnt exist or you are not an admin"
+        })
+        return
+    }
+
+    const memberUser= USERS.find(u => u.username ===memberUserUsername);
+
+    if(!memberUser){
+        res.status(411).json({
+            message: "No user with this username exists in our db"
+        })
+        return
+    }
 
 
 
-// app.post('/signin',(req,res)=>{
+    organisation.member.push(memberUser.id);
+    res.json({
+        message: "new member added"
+    })
 
-//     const username= req.body.username;
-//     const password= req.body.password;
+})
 
-//     const userExist=USERS.find(u=> u.username === username && u.password === password);
-//     if(!userExist) {
-//        return res.status(403).json({
-//             message: "Invalid credientials"
-//         })
+app.post("/board",(req,res)=>{
 
-//     }
+})
 
-//   const token =  jwt.sign({
-//         userId: userExist.id
-//     },"atlassiansecretpassword")
+app.post("/issue",(req,res)=>{
 
-//       res.json({
-//             token
-//         })
-// })
+})
 
-// app.post('/organizations',authMiddleware,(req,res)=>{
-//   const user=req.userId;
+app.get("/boards",(req,res)=>{
 
-//   ORGANIZATIONS.push({
-//     id:ORGANIZATIONS_ID++,
-//     title: req.body.title,
-//     description: req.body.description,
-//     admin: user,
-//     member: []
-//   })
-//   res.json({
-//    message: "Org's Created",
-//    id: ORGANIZATIONS_ID-1
-//   })
-// })
-
-// app.post('/add-member-to-org',authMiddleware,(req,res)=>{
-
-//     const userId=req.userId;
-//     const organisationId= req.body.organisationId;
-//     const memberUserUsername= req.body.memberUserUsername;
-
-//     const organisation =ORGANIZATIONS.find(org => org.id=== organisationId);
+})
+app.get("/organisation",authmiddleware,(req,res)=>{
+const userId =req.userId;
+const organisationId= parseInt(req.query.organisationId);
 
 
-//    if(!organisation || organisation.admin !=userId) {
-//     res.status(411).json({
-//         message: "Incorrect Org's or You are not Admin of the org"
-//     })
-//     return
-//    }
 
-//    const memberUser = USERS.find(u => u.username === memberUserUsername);
-//   if(!memberUser){
-//      res.status(411).json({
-//         message: "No user with this username Exist in our Db"
-//     })
-//     return
-//   }
+    const organisation=ORGANISATIONS.find(org => org.id=== organisationId);
 
+    if(!organisation || organisation.admin !== userId){
+        res.status(411).json({
+            message: "Either org doesnt exist or you are not an admin"
+        })
+        return
+    }
 
-//    organisation.member.push(memberUser.id);
+    res.json({
+        organisation: organisation
+    })
 
-//   res.json({
-//     message: "new member added!"
-//   })
-
-// })
-
-// app.post('/board',(req,res)=>{
-
-// })
-
-// app.post('/issue',(req,res)=>{
-
-// })
-
-// app.get('/organisations',authMiddleware,(req,res)=>{
- 
-//     const userId= req.userId;
-//     const organisationId=parseInt(req.query.organisationId);
-//     const organisation = ORGANIZATIONS.find(
-//     org => org.id == organisationId
-// );
-
-//      if(!organisation || organisation.admin !=userId) {
-//     res.status(411).json({
-//         message: "Incorrect Org's or You are not Admin of the org"
-//     })
-//     return
-//    }
-
-//    res.json({
-//     organisation: {
-//         ...organisation,
-//         member: organisation.member.map(memberId => {
-//             const user= USERS.find(user => user.id ===memberId);
-//             return {
-//                 id: user.id,
-//                 username: user.username
-//             }
-//         })
-//     }
-//    })
-// })
-
-// app.get('/board',(req,res)=>{
-
-// })
-// app.get('/issues',(req,res)=>{
+})
+app.get("/issues",(req,res)=>{
     
-// })
-// app.get('/members',(req,res)=>{
+})
+
+app.get("/member",(req,res)=>{
     
-// })
+})
 
-// app.put('/issues',(req,res)=>{
+app.put("/issues",(req,res)=>{
 
-// })
+})
 
-// app.delete('/members',authMiddleware,(req,res)=>{
+app.delete("/members",authmiddleware,(req,res)=>{
+const userId=req.userId;
+    const organisationId=req.body.organisationId;
+    const memberUserUsername= req.body.memberUserUsername;
 
-//      const userId=req.userId;
-//     const organisationId= req.body.organisationId;
-//     const memberUserUsername= req.body.memberUserUsername;
+    const organisation=ORGANISATIONS.find(org => org.id=== organisationId);
 
-//     const organisation =ORGANIZATIONS.find(org => org.id=== id);
+    if(!organisation || organisation.admin !== userId){
+        res.status(411).json({
+            message: "Either org doesnt exist or you are not an admin"
+        })
+        return
+    }
 
+    const memberUser= USERS.find(u => u.username ===memberUserUsername);
 
-//    if(!organisation || organisation.admin !=userId) {
-//     res.status(411).json({
-//         message: "Incorrect Org's or You are not Admin of the org"
-//     })
-//     return
-//    }
+    if(!memberUser){
+        res.status(411).json({
+            message: "No user with this username exists in our db"
+        })
+        return
+    }
 
-//    const memberUser = USERS.find(u => u.username === memberUserUsername);
-//   if(!memberUser){
-//      res.status(411).json({
-//         message: "No user with this username Exist in our Db"
-//     })
-//     return
-//   }
-
-
-//    organisation.member = organisation.member.filter(user =>user.id !== memberUser.id);
-
-//   res.json({
-//     message: "old member Deleted!"
-//   })
+organisation.member= organisation.member.filter(id => id !== memberUser.id);
 
 
-// })
+    res.json({
+        message: "member removed"
+    })
 
 
-// app.listen(3000);
+})
 
-
-
-
+app.listen(3000);
