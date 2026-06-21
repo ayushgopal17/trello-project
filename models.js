@@ -1,5 +1,5 @@
 const mongoose= require("mongoose")
-mongoose.connect("mongodb+srv://Ayushmongodb:WBujynVgBTWoz9QZ@cluster0.c4dgxv6.mongodb.net/trello")
+mongoose.connect("yourmongourl")
 
 const userSchema= mongoose.Schema({
     username: String,
