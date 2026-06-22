@@ -1,31 +1,21 @@
-
-const jwt=require("jsonwebtoken")
+const jwt= require("jsonwebtoken");
 
 function authmiddleware(req,res,next){
+const token =req.headers.token;
 
-    try{
-    const token= req.headers.token;
+const decode=jwt.verify(token,"Ayush123")
+const userId= decode.userId;
 
-    const decoded=jwt.verify(token,"Atlassian123")
-   const userId=decoded.userId;
-  
-   if(userId){
+if(userId){
     req.userId=userId;
     next();
-   }
-   else{
+}
+else{
     res.status(403).json({
         message: "Token was incorrect"
     })
-   }
-}
-
-catch(err){
-res.status(403).send({
-    message: "Invalid token"
-})
 }
 }
-module.exports= {
+module.exports={
     authmiddleware
 }
