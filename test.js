@@ -35,7 +35,7 @@ async function run() {
 
     // Create Organisation
     const orgRes = await axios.post(
-      `${BASE_URL}/organization`,
+      `${BASE_URL}/organisation`,
       {
         title: "Zomato",
         description: "Food Delivery"
