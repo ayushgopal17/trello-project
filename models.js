@@ -36,13 +36,28 @@ const userSchema= new mongoose.Schema({
 const organisationSchema= new mongoose.Schema({
     title : String,
     description: String,
-    admin: mongoose.Types.ObjectId ,
-    members:[mongoose.Types.ObjectId]
+    admin: mongoose.Types.ObjectId,
+    members :[mongoose.Types.ObjectId]
 })
+
+const boardSchema= new mongoose.Schema({
+
+    title: String,
+    organisationId: mongoose.Types.ObjectId
+})
+
+const issueSchema= new mongoose.Schema({
+    title: String,
+    description: String,
+    status: String,
+    boardId: mongoose.Types.ObjectId
+})
+
 
 const userModel=mongoose.model("user",userSchema);
 const  organisationModel=mongoose.model("organisation",organisationSchema);
-
+const boardModel=mongoose.model("board",boardSchema);
+const issueModel=mongoose.model("issue",issueSchema);
 module.exports={
-    userModel,organisationModel
+    userModel,organisationModel,boardModel,issueModel
 }
