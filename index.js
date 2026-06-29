@@ -1,11 +1,24 @@
+
+//Task left->
+// -> password hashing
+//-> frontend
+
 const express= require("express")
 const jwt= require("jsonwebtoken")
 const {authmiddleware}= require("./middleware");
 const {userModel,organisationModel,boardModel,issueModel} = require("./models")
 const mongoose=require("mongoose");
 const { Result } = require("pg");
+const bcrypt=require("bcrypt");
+const z=require("zod");
 
 const app=express();
+
+
+const SignupSchema= z.object({
+    username:z.string().min(3),
+    password: z.string().min(8)
+})
 
 app.use(express.json());
 // let USERS_ID=1;
@@ -21,21 +34,40 @@ app.use(express.json());
 // Name of project WorkSync 
 
 // create 
+
 app.post("/signup",async (req,res)=>{
-    const username=req.body.username;
-    const password= req.body.password;
+
+    try{
+    
+
+    
+    const {data,success,error}= SignupSchema.safeParse(req.body)
+
+    if(!success){
+      return  res.status(400).json({
+            message: "Incorrect inputs" , error: error.issues
+        })
+      
+    }
+
+    const username=data.username;
+    const password= data.password;
+
+
 
     //const userExist= USERS.find(u=> u.username === username);
     const userExist= await userModel.findOne({
         username: username
     })
+   
 
     if(userExist){
-        res.status(403).json({
+      return  res.status(409).json({
             message: "User with this Username already exist"
         })
-        return
+     
     }
+      const hashedpassword=await bcrypt.hash(password,10);
 
 //   USERS.push({
 //         username: username,
@@ -44,51 +76,107 @@ app.post("/signup",async (req,res)=>{
 //     })
 const user= await userModel.create({
     username,
-    password
+    password: hashedpassword
 })
 
 
-    res.json({
+  return  res.status(201).json({
         message : "you have successfully signed up",
         id: user._id
     })
-    
+    }
+    catch(err){
+        console.error(err);
+return res.status(500).json({
+    message: "internal server Error"
+})
+    }
 })
 
+const signinSchema = z.object({
+    username: z.string().min(3),
+    password: z.string().min(8)
+})
 
 app.post("/signin",async (req,res)=>{
+    try{
 
-    const username= req.body.username;
-    const password= req.body.password;
+    
+
+    const { data,success,error} =signinSchema.safeParse(req.body);
+
+    if(!success){
+      return  res.status(400).json({
+            message: "Incorrect Inputs",
+            error: error.issues
+        })
+          }
+
+    const username= data.username;
+    const password= data.password;
 
     //const userExist= USERS.find(u=> u.username === username && u.password === password)
+
     const userExist=await userModel.findOne({
-        username,
-        password
+        username
+        
     })
 
     if(!userExist){
-        res.status(403).json({
+      return  res.status(403).json({
             message: "Incorrect credientials"
         })
-        return
+        
     }
- 
-    const token= jwt.sign({
-        userId: userExist.id
-
-    },"Ayush123");
     
-res.json({
+const correctpassword= await bcrypt.compare(password,userExist.password)
+    
+  if(correctpassword){
+    const token= jwt.sign({
+        userId: userExist._id
+
+    },process.env.JWT_SECRET);
+
+ return res.json({
     token
 })
+
+}
+
+   return res.status(401).json({
+        message: "Incorrect credientials"
+    })
+    }
+    catch(err){
+        console.error(err)
+        return res.status(500).json({
+            message: "Internal error occured"
+        })
+    }
+
+})
+
+const organisationSchema= z.object({
+    title: z.string().min(3),
+    description: z.string().min(5)
 })
 
 app.post("/organisation",authmiddleware,async (req,res)=>{
+    try{
 
-     const userId= req.userId;
     
 
+const {data ,success,error}=organisationSchema.safeParse(req.body);
+
+if(!success){
+    return res.status(400).json({
+        message: "Incorrect Inputs",
+        error: error.issues
+    })
+}
+
+const {title,description}= data;
+     const userId= req.userId;
     //  ORGANISATIONS.push({
     //     id: ORGANISATIONS_ID++,
     //     title: req.body.title,
@@ -98,28 +186,56 @@ app.post("/organisation",authmiddleware,async (req,res)=>{
     //  })
 
      const organisation= await organisationModel.create({
-        title:req.body.title,
-        description: req.body.description,
+       //title:req.body.title,
+        //description: req.body.description,
+        title,
+        description,
         admin: userId,
         members:[]
      })
-     res.json({
-        message: "org created",
+     return res.status(201).json({
+        message: "organisation created successfully",
         id: organisation._id
      })
+    }
+    catch(err){
+        console.error(err)
+    return res.status(500).json({
+    message: "Internal error occured"
+   })
+    }
+    
 })
 
+const addmemberorgSchema= z.object({
+    organisationId: z.string(),
+     memberUserUsername: z.string().min(3)
+
+})
 app.post("/add-member-to-organisation",authmiddleware, async(req,res)=>{
+
+try{
+
+
+const {data,success,error}= addmemberorgSchema.safeParse(req.body);
+
+if(!success){
+    return res.status(400).json({
+    message: "Incorrect Input",
+    error: error.issues
+    })
+}
+
     const userId= req.userId;
-     const organisationId=req.body.organisationId;
-     const memberUserUsername= req.body.memberUserUsername;
+     const organisationId=data.organisationId;
+     const memberUserUsername= data.memberUserUsername;
 
      //const organisation= ORGANISATIONS.find(org=> org.id=== organisationId);
      const organisation= await organisationModel.findOne({
        _id: organisationId
      })
      if(!organisation || organisation.admin.toString() != userId){
-        res.status(411).json({
+        res.status(403).json({
             message: "Either this org doesn't exist or you are not a member of this org"
         })
         return
@@ -154,6 +270,14 @@ app.post("/add-member-to-organisation",authmiddleware, async(req,res)=>{
      res.json({
         message: "New member added"
      })
+    }
+    catch(err){
+        console.error(err)
+     return   res.status(500).json({
+message: "Internal Server error"
+        })
+
+    }
 
 })
 //
@@ -389,7 +513,7 @@ app.put("/issues",authmiddleware, async (req,res)=>{
         message:"Issue updated"
     })
 })
-
+//
 app.delete("/members",authmiddleware,async(req,res)=>{
 const userId= req.userId;
      const organisationId=req.body.organisationId;
