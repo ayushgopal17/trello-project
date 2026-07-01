@@ -272,26 +272,46 @@ if(!success){
      })
     }
     catch(err){
+        
         console.error(err)
      return   res.status(500).json({
-message: "Internal Server error"
+       message: "Internal Server error"
         })
 
     }
 
 })
-//
+
+
+const boardSchema=z.object({
+    organisationId: z.string(),
+    title: z.string().min(3)
+})
 app.post("/board",authmiddleware,async(req,res)=>{
+
+    try{
+
+    
+const {data,success,error}= boardSchema.safeParse(req.body)
+
+ if(!success){
+   return res.status(403).json({
+        message: "Incorrect input",
+        error: error.issues
+    })
+ }
+
     const userId=req.userId;
-    const organisationId=req.body.organisationId;
-    const title=req.body.title;
+    
+    const organisationId=data.organisationId;
+    const title=data.title;
  
    // const organisation= ORGANISATIONS.find( org=> org.id=== organisationId);
 const organisation= await organisationModel.findOne({
       _id: organisationId
 })
 
-    if(!organisation || organisation.admin !=userId){
+    if(!organisation || organisation.admin.toString() !=userId){
         res.json({
             message: "either wrong organisation or you are not an admin"
         })
@@ -312,14 +332,41 @@ const organisation= await organisationModel.findOne({
         message: "Board created",
         id: board._id
     })
+}
+     catch(err){
+         console.error(err)
+   return res.status(500).json({
+    message: "Internal Error"
+   
+   })
+
+}
 })
-//
+
+
+const issueSchema=z.object({
+    boardId: z.string(),
+    title: z.string().min(3),
+    description: z.string(),
+    status: z.string()
+
+})
 app.post("/issues",authmiddleware, async(req,res)=>{
 
-const boardId=req.body.boardId;
-const title=req.body.title;
-const description=req.body.description;
-const status=req.body.status;
+    try{
+const {data,success,error}= issueSchema.safeParse(req.body);
+
+if(!success){
+    return res.json({
+        message: "Invalid credientials",
+        error: error.issues
+    })
+}
+
+const boardId=data.boardId;
+const title=data.title;
+const description=data.description;
+const status=data.status;
 
 //const board= BOARDS.find(board=> board.id ===boardId);
 const board= await boardModel.findOne({
@@ -327,7 +374,7 @@ const board= await boardModel.findOne({
 })
 
 if(!board ){
-    res.status(403).json({
+    res.status(400).json({
         message: " your board does not exist"
     })
     return
@@ -352,7 +399,13 @@ res.json({
    // id: ISSUES_ID-1
    id: issue._id
 })
-
+    }
+    catch(err){
+        console.error(err)
+        return res.status(500).json({
+            message: "Internal error"
+        })
+    }
 })
 
 app.get("/organisation",authmiddleware,async(req,res)=>{
@@ -489,10 +542,27 @@ const result= members.map(user =>({
 
 //
 // Update
+
+const issueSchemaa= z.object({
+    issueId: z.string(),
+    status: z.string()
+})
 app.put("/issues",authmiddleware, async (req,res)=>{
 
-    const issueId=req.body.issueId;
-    const status=req.body.status;
+    try{
+
+    
+    const{ data,success,error}= issueSchemaa.safeParse(req.body);
+
+    if(!success){
+        return res.status(400).json({
+            message: "Invalid credientials",
+            error: error.issues
+        })
+    }
+
+    const issueId=data.issueId;
+    const status=data.status;
 
     // const issue= ISSUES.find(
     //     issue=> issue.id=== issueId
@@ -503,7 +573,7 @@ app.put("/issues",authmiddleware, async (req,res)=>{
     })
 
     if(!issue){
-        return res.status(403).json({
+        return res.status(404).json({
             message: "issue not found"
         });
     }
@@ -512,19 +582,42 @@ app.put("/issues",authmiddleware, async (req,res)=>{
     res.json({
         message:"Issue updated"
     })
+}
+catch(err){
+    console.error(err)
+   return res.status(500).json({
+        message: "Internal error "
+    })
+}
 })
 //
+const memberSchema= z.object({
+    organisationId: z.string(),
+    memberUserUsername: z.string()
+})
 app.delete("/members",authmiddleware,async(req,res)=>{
+    try{
+
+    
+const {data,success,error}= memberSchema.safeParse(req.body)
+
+if(!success){
+    return res.status(400).json({
+        message: "Invalid credientials",
+        error: error.issues
+    })
+}
 const userId= req.userId;
-     const organisationId=req.body.organisationId;
-     const memberUserUsername= req.body.memberUserUsername;
+     const organisationId=data.organisationId;
+     const memberUserUsername= data.memberUserUsername;
+
 
      //const organisation= ORGANISATIONS.find(org=> org.id=== organisationId);
      const organisation= await organisationModel.findById(
       organisationId
      )
      if(!organisation || organisation.admin.toString() != userId){
-        res.status(411).json({
+        res.status(403).json({
             message: "Either this org doesn't exist or you are not a member of this org"
         })
         return
@@ -536,7 +629,7 @@ const userId= req.userId;
      })
 
      if(!memberUser){
-        res.status(403).json({
+        res.status(404).json({
             message: "No user with this username in our db"
         })
         return
@@ -555,6 +648,13 @@ const userId= req.userId;
      res.json({
         message: "member deleted"
      })
+    }
+    catch(err){
+console.error(err)
+return res.status(500).json({
+    message: "Internal Error "
+})
+    }
 })
 
 app.listen(3000);

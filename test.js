@@ -4,56 +4,82 @@ const BASE_URL = "http://localhost:3000";
 
 async function run() {
     try {
-        console.log("🚀 Starting WorkSync Tests...\n");
+        console.log("========== WorkSync Backend Test ==========\n");
 
-        const username1 = "ayush_" + Date.now();
-        const username2 = "rahul_" + Date.now();
+        const username1 = "ayushgopal_" + Date.now();
+        const username2 = "shivamsingh_" + Date.now();
 
-        // Signup Ayush
+        //----------------------------------------
+        // Signup
+        //----------------------------------------
+
+        console.log("1. Signup Users");
+
         await axios.post(`${BASE_URL}/signup`, {
             username: username1,
-            password: "123"
+            password: "12345678"
         });
 
-        console.log("✅ Ayush Signup");
-
-        // Signup Rahul
         await axios.post(`${BASE_URL}/signup`, {
             username: username2,
-            password: "123"
+            password: "123456789"
         });
 
-        console.log("✅ Rahul Signup");
+        console.log("✅ Signup Passed\n");
 
-        // Signin Ayush
-        const signinRes = await axios.post(`${BASE_URL}/signin`, {
+        //----------------------------------------
+        // Signin
+        //----------------------------------------
+
+        console.log("2. Signin");
+
+        const signin = await axios.post(`${BASE_URL}/signin`, {
             username: username1,
-            password: "123"
+            password: "12345678"
         });
 
-        const token = signinRes.data.token;
+        const token = signin.data.token;
 
-        console.log("✅ Ayush Signin");
+        if (!token) {
+            throw new Error("Token not received");
+        }
 
         const headers = {
             token
         };
 
+        console.log("✅ Signin Passed\n");
+
+        //----------------------------------------
         // Create Organisation
-        const orgRes = await axios.post(
+        //----------------------------------------
+
+        console.log("3. Create Organisation");
+
+        const org = await axios.post(
             `${BASE_URL}/organisation`,
             {
                 title: "WorkSync",
-                description: "Testing Organisation"
+                description: "Testing Backend"
             },
             { headers }
         );
 
-        const organisationId = orgRes.data.id;
+        const organisationId = org.data.id;
 
-        console.log("✅ Organisation Created");
+        if (!organisationId) {
+            throw new Error("Organisation ID missing");
+        }
 
-        // Add Rahul
+        console.log("Organisation ID :", organisationId);
+        console.log("✅ Organisation Created\n");
+
+        //----------------------------------------
+        // Add Member
+        //----------------------------------------
+
+        console.log("4. Add Member");
+
         await axios.post(
             `${BASE_URL}/add-member-to-organisation`,
             {
@@ -63,10 +89,28 @@ async function run() {
             { headers }
         );
 
-        console.log("✅ Member Added");
+        console.log("✅ Member Added\n");
 
+        //----------------------------------------
+        // Verify Members
+        //----------------------------------------
+
+        console.log("5. Verify Members");
+
+        const members = await axios.get(
+            `${BASE_URL}/members?organisationId=${organisationId}`,
+            { headers }
+        );
+
+        console.log(members.data);
+
+        //----------------------------------------
         // Create Board
-        const boardRes = await axios.post(
+        //----------------------------------------
+
+        console.log("\n6. Create Board");
+
+        const board = await axios.post(
             `${BASE_URL}/board`,
             {
                 organisationId,
@@ -75,12 +119,35 @@ async function run() {
             { headers }
         );
 
-        const boardId = boardRes.data.id;
+        const boardId = board.data.id;
 
-        console.log("✅ Board Created");
+        if (!boardId) {
+            throw new Error("Board ID missing");
+        }
 
+        console.log("Board ID :", boardId);
+        console.log("✅ Board Created\n");
+
+        //----------------------------------------
+        // Verify Boards
+        //----------------------------------------
+
+        console.log("7. Verify Boards");
+
+        const boards = await axios.get(
+            `${BASE_URL}/boards?organisationId=${organisationId}`,
+            { headers }
+        );
+
+        console.log(boards.data);
+
+        //----------------------------------------
         // Create Issue
-        const issueRes = await axios.post(
+        //----------------------------------------
+
+        console.log("\n8. Create Issue");
+
+        const issue = await axios.post(
             `${BASE_URL}/issues`,
             {
                 boardId,
@@ -91,47 +158,34 @@ async function run() {
             { headers }
         );
 
-        const issueId = issueRes.data.id;
+        const issueId = issue.data.id;
 
-        console.log("✅ Issue Created");
+        if (!issueId) {
+            throw new Error("Issue ID missing");
+        }
 
-        // Get Organisation
-        const organisation = await axios.get(
-            `${BASE_URL}/organisation?organisationId=${organisationId}`,
-            { headers }
-        );
+        console.log("Issue ID :", issueId);
+        console.log("✅ Issue Created\n");
 
-        console.log("✅ Organisation Fetched");
-        console.log(organisation.data);
+        //----------------------------------------
+        // Verify Issues
+        //----------------------------------------
 
-        // Get Boards
-        const boards = await axios.get(
-            `${BASE_URL}/boards?organisationId=${organisationId}`,
-            { headers }
-        );
+        console.log("9. Verify Issues");
 
-        console.log("✅ Boards Fetched");
-        console.log(boards.data);
-
-        // Get Issues
-        const issues = await axios.get(
+        let issues = await axios.get(
             `${BASE_URL}/issues?boardId=${boardId}`,
             { headers }
         );
 
-        console.log("✅ Issues Fetched");
         console.log(issues.data);
 
-        // Get Members
-        const members = await axios.get(
-            `${BASE_URL}/members?organisationId=${organisationId}`,
-            { headers }
-        );
-
-        console.log("✅ Members Fetched");
-        console.log(members.data);
-
+        //----------------------------------------
         // Update Issue
+        //----------------------------------------
+
+        console.log("\n10. Update Issue");
+
         await axios.put(
             `${BASE_URL}/issues`,
             {
@@ -143,7 +197,25 @@ async function run() {
 
         console.log("✅ Issue Updated");
 
+        //----------------------------------------
+        // Verify Updated Issue
+        //----------------------------------------
+
+        console.log("\n11. Verify Issue Status");
+
+        issues = await axios.get(
+            `${BASE_URL}/issues?boardId=${boardId}`,
+            { headers }
+        );
+
+        console.log(issues.data);
+
+        //----------------------------------------
         // Delete Member
+        //----------------------------------------
+
+        console.log("\n12. Delete Member");
+
         await axios.delete(
             `${BASE_URL}/members`,
             {
@@ -157,12 +229,45 @@ async function run() {
 
         console.log("✅ Member Deleted");
 
-        console.log("\n🎉 ALL TESTS PASSED SUCCESSFULLY 🎉");
+        //----------------------------------------
+        // Verify Member Deleted
+        //----------------------------------------
+
+        console.log("\n13. Verify Members");
+
+        const membersAfterDelete = await axios.get(
+            `${BASE_URL}/members?organisationId=${organisationId}`,
+            { headers }
+        );
+
+        console.log(membersAfterDelete.data);
+
+        //----------------------------------------
+        // Fetch Organisation
+        //----------------------------------------
+
+        console.log("\n14. Fetch Organisation");
+
+        const organisation = await axios.get(
+            `${BASE_URL}/organisation?organisationId=${organisationId}`,
+            { headers }
+        );
+
+        console.log(organisation.data);
+
+        console.log("\n=======================================");
+        console.log("🎉 ALL API TESTS PASSED SUCCESSFULLY");
+        console.log("🚀 Backend is Ready for Frontend");
+        console.log("=======================================");
 
     } catch (err) {
-        console.log("\n❌ TEST FAILED");
+
+        console.log("\n=======================================");
+        console.log("❌ TEST FAILED");
+        console.log("=======================================\n");
 
         if (err.response) {
+            console.log("Status :", err.response.status);
             console.log(err.response.data);
         } else {
             console.log(err.message);
